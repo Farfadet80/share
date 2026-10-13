@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ShareMark } from "@/components/share-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CODE_PATTERN, joinCode, peerStorageKey } from "@/lib/codes";
@@ -57,7 +58,10 @@ export function HomeScreen({ joinHint = null }: { joinHint?: string | null }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-medium tracking-tight">Share</h1>
+        <h1 className="flex items-center gap-3 text-3xl font-medium tracking-tight">
+          <ShareMark className="size-10 shrink-0" />
+          Share
+        </h1>
         <Button
           type="button"
           variant="ghost"
