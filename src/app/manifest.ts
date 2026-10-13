@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Partage",
-    short_name: "Partage",
-    description: "Partage d'écran consenti entre un téléphone et un ordinateur.",
+    name: "Share",
+    short_name: "Share",
+    description: "L'ordinateur envoie son écran. Le téléphone le regarde.",
     start_url: "/",
     scope: "/",
     display: "standalone",

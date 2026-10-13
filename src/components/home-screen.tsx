@@ -55,9 +55,9 @@ export function HomeScreen({ joinHint = null }: { joinHint?: string | null }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <header className="flex items-center justify-between">
-        <h1 className="text-lg font-medium">Partage</h1>
+        <h1 className="text-3xl font-medium tracking-tight">Share</h1>
         <Button
           type="button"
           variant="ghost"
@@ -69,27 +69,28 @@ export function HomeScreen({ joinHint = null }: { joinHint?: string | null }) {
         </Button>
       </header>
 
-      <div className="flex flex-1 flex-col justify-center gap-3">
-        {error ? (
-          <p role="alert" className="text-base text-destructive">
-            {error}
-          </p>
-        ) : null}
+      <div className="flex flex-1 flex-col justify-between py-8">
+        <p className="text-base leading-snug">Créez une session, ou entrez le code pour rejoindre.</p>
 
-        <Button
-          type="button"
-          className="h-14 w-full rounded-lg text-base"
-          disabled={pending !== null}
-          onClick={() => void createSession()}
-        >
-          {pending === "create" ? "Création…" : "Créer une session"}
-        </Button>
-
-        <p className="py-1 text-center text-sm text-muted-foreground">ou</p>
+        <div className="flex flex-col gap-3">
+          {error ? (
+            <p role="alert" className="text-base text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            className="h-16 w-full rounded-lg text-lg"
+            disabled={pending !== null}
+            onClick={() => void createSession()}
+          >
+            {pending === "create" ? "Création…" : "Créer une session"}
+          </Button>
+        </div>
 
         <form className="flex flex-col gap-3" method="get" action="/rejoindre" onSubmit={joinSession}>
-          <label className="sr-only" htmlFor="session-code">
-            Code de la session
+          <label className="text-sm text-muted-foreground" htmlFor="session-code">
+            Code
           </label>
           <Input
             id="session-code"
@@ -108,6 +109,10 @@ export function HomeScreen({ joinHint = null }: { joinHint?: string | null }) {
             {pending === "join" ? "Ouverture…" : "Rejoindre"}
           </Button>
         </form>
+
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Cinq personnes. L&apos;ordinateur envoie l&apos;écran, le téléphone regarde.
+        </p>
       </div>
     </main>
   );

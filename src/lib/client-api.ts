@@ -29,6 +29,6 @@ export function sessionErrorText(code: string | undefined): string {
     case "absent":
       return "La session ne vous reconnaît plus. Revenez à l'accueil et entrez le code à nouveau.";
     default:
-      return "La liaison avec Partage a été coupée. Réessayez dans un instant.";
+      return "La liaison avec Share a été coupée. Réessayez dans un instant.";
   }
 }

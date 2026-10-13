@@ -5,15 +5,14 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Partage",
-    template: "%s · Partage",
+    default: "Share",
+    template: "%s · Share",
   },
-  description:
-    "Partage d'écran consenti entre un téléphone et un ordinateur. Chacun choisit de montrer son écran ou de regarder.",
-  applicationName: "Partage",
+  description: "L'ordinateur envoie son écran. Le téléphone le regarde. Cinq personnes au plus.",
+  applicationName: "Share",
   appleWebApp: {
     capable: true,
-    title: "Partage",
+    title: "Share",
     statusBarStyle: "black",
   },
   icons: {
