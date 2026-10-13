@@ -169,7 +169,7 @@ function chatAuthor(authorId: string, youId: string, knownIds: string[]) {
 }
 
 function presenceText(total: number) {
-  if (total <= 1) return `Vous êtes seul. ${MAX_PARTICIPANTS - 1} invités peuvent encore rejoindre.`;
+  if (total <= 1) return "Vous êtes seul.";
   if (total >= MAX_PARTICIPANTS) return "Vous êtes cinq. La session est complète.";
   const words = ["", "seul", "deux", "trois", "quatre", "cinq"];
   return `Vous êtes ${words[total] ?? String(total)}.`;
@@ -244,7 +244,6 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
     () => null as boolean | null,
   );
   const secure = useSyncExternalStore(subscribeBrowser, () => window.isSecureContext, () => null as boolean | null);
-  const origin = useSyncExternalStore(subscribeBrowser, () => window.location.origin, () => "");
   const [sharePending, setSharePending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [streamVersion, setStreamVersion] = useState(0);
@@ -1007,14 +1006,13 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
 
   if (phase === "fatal") {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-4 px-4 py-10">
-        <p className="text-sm font-semibold tracking-wide text-primary uppercase">Partage</p>
-        <h1 className="font-heading text-4xl">Session indisponible</h1>
-        <p role="alert" className="text-lg leading-relaxed">
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-4">
+        <h1 className="text-lg font-medium">Session indisponible</h1>
+        <p role="alert" className="text-base">
           {fatal}
         </p>
-        <Button type="button" className="h-14 rounded-2xl text-base" onClick={() => router.push("/")}>
-          Retour à l&apos;accueil
+        <Button type="button" className="h-12 rounded-lg text-base" onClick={() => router.push("/")}>
+          Accueil
         </Button>
       </main>
     );
@@ -1022,10 +1020,8 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
 
   if (phase !== "ready") {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-3 px-4 py-10">
-        <p className="text-sm font-semibold tracking-wide text-primary uppercase">Partage</p>
-        <h1 className="font-heading text-4xl">Connexion à la session…</h1>
-        <p className="text-lg text-muted-foreground">Le code {codeValid ? code : ""} est en cours de vérification.</p>
+      <main className="grid min-h-dvh place-items-center px-4">
+        <p className="text-base">Connexion… {codeValid ? code : ""}</p>
       </main>
     );
   }
@@ -1040,91 +1036,68 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
   const waitingForImage = !iShare && peerSharing && media !== "remote";
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-5 px-4 py-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <header className="flex items-center justify-between gap-3">
+    <main className="mx-auto flex h-dvh w-full max-w-3xl flex-col px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <header className="flex items-start justify-between gap-2 pb-2">
         <div className="min-w-0">
-          <p className="font-heading text-3xl leading-none">Partage</p>
-          <p className="mt-1 text-sm text-muted-foreground" data-testid="presence">
+          <div className="flex items-center gap-2">
+            <p className="sr-only">Code {code}</p>
+            <div
+              data-testid="session-code"
+              className="font-mono text-base tracking-[0.18em]"
+              onCopy={(event) => {
+                event.preventDefault();
+                event.clipboardData.setData("text/plain", code);
+              }}
+            >
+              {code}
+            </div>
+            <button type="button" className="h-11 px-1 text-sm text-primary" onClick={() => void copyCode()}>
+              {copied ? "Copié" : "Copier"}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground" data-testid="presence">
             {presenceText(roomSize)}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 gap-1">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             data-testid="refresh-button"
-            className="h-11 rounded-2xl px-3 text-sm"
+            className="h-11 px-2 text-sm"
             onClick={() => window.location.reload()}
           >
             Actualiser
           </Button>
-          <Button type="button" variant="outline" className="h-11 rounded-2xl px-3 text-sm" onClick={() => void leave()}>
+          <Button type="button" variant="ghost" className="h-11 px-2 text-sm" onClick={() => void leave()}>
             Quitter
           </Button>
         </div>
       </header>
 
-      <section className="rounded-3xl bg-card px-4 py-4 ring-1 ring-foreground/10" aria-label="Code de la session">
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-center text-base">
-            {roomSize >= MAX_PARTICIPANTS
-              ? "La session est complète. Le code reste affiché si quelqu'un quitte."
-              : "Donnez ce code aux invités. Chacun l'entre sur son appareil."}
-          </p>
-          <p className="sr-only">Code {code}</p>
-          <div
-            className="flex gap-2"
-            data-testid="session-code"
-            onCopy={(event) => {
-              event.preventDefault();
-              event.clipboardData.setData("text/plain", code);
-            }}
-          >
-            {code.split("").map((character, index) => (
-              <span
-                key={`${character}-${index}`}
-                className="grid h-14 w-12 place-items-center rounded-2xl bg-foreground font-heading text-2xl text-background"
-              >
-                {character}
-              </span>
-            ))}
-          </div>
-          <Button type="button" variant="outline" className="h-11 rounded-2xl px-4" onClick={() => void copyCode()}>
-            {copied ? "Code copié" : "Copier le code"}
-          </Button>
-          {roomSize < MAX_PARTICIPANTS ? (
-            <p className="text-center text-sm text-muted-foreground">
-              {origin
-                ? `Sur chaque appareil, ouvrez ${origin}, puis choisissez Rejoindre.`
-                : "Sur chaque appareil, ouvrez la même adresse, puis choisissez Rejoindre."}
-            </p>
-          ) : null}
-        </div>
-      </section>
-
       {secure === false ? (
-        <p role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-base">
+        <p role="alert" className="pb-2 text-sm text-destructive">
           {NOT_SECURE}
         </p>
       ) : null}
       {canCapture === false ? (
-        <p id="capture-unsupported" role="status" data-testid="capture-unsupported" className="rounded-2xl bg-secondary px-4 py-3 text-base text-secondary-foreground">
+        <p id="capture-unsupported" role="status" data-testid="capture-unsupported" className="pb-2 text-sm text-muted-foreground">
           {NO_CAPTURE}
         </p>
       ) : null}
       {captureMessage ? (
-        <p role="alert" data-testid="capture-error" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-base">
+        <p role="alert" data-testid="capture-error" className="pb-2 text-sm text-destructive">
           {captureMessage}
         </p>
       ) : null}
       {linkWarning ? (
-        <p role="status" className="rounded-2xl bg-muted px-4 py-3 text-base">
+        <p role="status" className="pb-2 text-sm text-muted-foreground">
           {linkWarning}
         </p>
       ) : null}
       {stalePeer ? (
-        <p role="status" className="rounded-2xl bg-muted px-4 py-3 text-base">
-          Un invité ne répond plus depuis un moment. La session reste ouverte.
+        <p role="status" className="pb-2 text-sm text-muted-foreground">
+          Un invité ne répond plus. La session reste ouverte.
         </p>
       ) : null}
 
@@ -1134,15 +1107,15 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
         data-immersive={immersive ? "true" : "false"}
         className={
           immersive
-            ? "fixed inset-0 z-[80] flex h-dvh w-full flex-col bg-black px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
-            : "flex flex-col gap-3 [&:fullscreen]:h-full [&:fullscreen]:justify-center [&:fullscreen]:bg-[#1c1410] [&:fullscreen]:p-4"
+            ? "fixed inset-0 z-[80] flex h-dvh w-full flex-col gap-2 bg-black px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            : "flex min-h-0 flex-1 flex-col gap-2 [&:fullscreen]:h-full [&:fullscreen]:bg-black [&:fullscreen]:p-3"
         }
       >
         <div
           className={
             immersive
               ? "relative min-h-0 w-full flex-1 overflow-hidden bg-black"
-              : "relative aspect-video w-full overflow-hidden rounded-3xl bg-[#1c1410] shadow-[inset_0_0_0_1px_rgba(255,250,243,0.08)] [&:fullscreen]:min-h-0 [&:fullscreen]:flex-1"
+              : "relative min-h-0 w-full flex-1 overflow-hidden rounded-lg bg-black [&:fullscreen]:min-h-0 [&:fullscreen]:flex-1"
           }
         >
           <video
@@ -1154,13 +1127,13 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
             className={media === "none" ? "invisible h-full w-full" : "h-full w-full object-contain"}
           />
           {media === "none" ? (
-            <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-[#f6f1e8]">
-              <p className="text-base leading-relaxed" data-testid="stage-empty">
+            <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-[#d1d1d6]">
+              <p className="text-sm" data-testid="stage-empty">
                 {waitingForImage
-                  ? "Connexion vidéo… L'image arrive dès que le partage est accepté."
+                  ? "Connexion…"
                   : others.length > 0
-                    ? "Personne ne partage pour l'instant."
-                    : "L'écran s'affichera ici quand un invité aura rejoint et que quelqu'un partagera."}
+                    ? "Personne ne partage."
+                    : "En attente d'un partage."}
               </p>
             </div>
           ) : null}
@@ -1168,7 +1141,7 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
             <button
               type="button"
               data-testid="play-button"
-              className="absolute top-1/2 left-1/2 z-30 h-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/55 px-6 text-base text-white"
+              className="absolute top-1/2 left-1/2 z-30 h-12 -translate-x-1/2 -translate-y-1/2 bg-black px-5 text-base text-white"
               onClick={() => void resumePlayback()}
             >
               Lecture
@@ -1176,7 +1149,7 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
           ) : null}
           <form
             data-testid="chat"
-            className="absolute right-2 bottom-2 z-20 flex w-[min(15rem,78%)] flex-col items-end gap-1"
+            className="absolute right-2 bottom-2 z-20 flex w-[min(14rem,72%)] flex-col items-end gap-1"
             onSubmit={(event) => void sendChat(event)}
           >
             {chatOpen ? (
@@ -1185,9 +1158,9 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
                 <li
                   key={message.id}
                   data-testid="chat-line"
-                  className="max-w-full rounded-md bg-black/35 px-2 py-0.5 text-right text-sm leading-snug text-white"
+                  className="max-w-full bg-black px-2 py-0.5 text-right text-sm leading-snug text-white"
                 >
-                  <span className="text-white/70">
+                  <span className="text-[#aeaeb2]">
                     {chatAuthor(message.from, roomRef.current.peerId, [
                       roomRef.current.peerId,
                       ...others.map((person) => person.id),
@@ -1208,34 +1181,34 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
                 autoComplete="off"
                 aria-label="Message"
                 placeholder="Message"
-                className="h-10 min-w-0 flex-1 rounded-full border-0 bg-black/35 px-3 text-base text-white outline-none placeholder:text-white/60"
+                className="h-11 min-w-0 flex-1 border-0 bg-black px-3 text-base text-white outline-none placeholder:text-[#8e8e93]"
               />
               <button
                 type="submit"
                 data-testid="chat-send"
-                className="h-10 shrink-0 rounded-full bg-black/35 px-3 text-sm text-white"
+                className="h-11 shrink-0 bg-[#3a3a3c] px-3 text-sm text-white"
               >
                 Envoyer
               </button>
             </div>
-            {chatError ? <p className="text-xs text-white/80">{chatError}</p> : null}
+            {chatError ? <p className="text-xs text-white">{chatError}</p> : null}
           </form>
         </div>
         {media === "remote" ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {soundBlocked ? (
               <Button
                 type="button"
                 data-testid="enable-sound"
-                className="h-14 w-full rounded-2xl text-base"
+                className="h-12 w-full rounded-lg text-base"
                 onClick={enableSound}
               >
                 Activer le son
               </Button>
             ) : null}
             {remoteAudio ? (
-              <label className="flex flex-col gap-2" htmlFor="share-volume">
-                <span className={`flex items-center justify-between text-base ${immersive ? "text-[#f6f1e8]" : ""}`}>
+              <label className="flex flex-col gap-1" htmlFor="share-volume">
+                <span className="flex items-center justify-between text-sm">
                   <span>Volume du partage</span>
                   <span data-testid="share-volume-value">{Math.round(shareVolume * 100)} %</span>
                 </span>
@@ -1249,11 +1222,8 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
                   step={1}
                   value={Math.round(shareVolume * 100)}
                   onChange={(event) => changeShareVolume(Number(event.target.value) / 100)}
-                  className="h-12 w-full cursor-pointer accent-primary"
+                  className="h-11 w-full cursor-pointer accent-primary"
                 />
-                <span className={`text-sm ${immersive ? "text-[#f6f1e8]/80" : "text-muted-foreground"}`}>
-                  Ce curseur baisse seulement la vidéo partagée. Le volume général de l&apos;iPhone, et un appel en cours, ne bougent pas.
-                </span>
               </label>
             ) : null}
           </div>
@@ -1263,24 +1233,24 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
             type="button"
             variant="secondary"
             data-testid="fullscreen-button"
-            className="h-14 w-full rounded-2xl text-base"
+            className="h-12 w-full rounded-lg text-base"
             onClick={() => void toggleFullscreen()}
           >
             {expanded ? "Quitter le plein écran" : "Plein écran"}
           </Button>
         ) : null}
-        <p className="text-sm text-muted-foreground" data-testid="media-mode">
+        <p className="text-xs text-muted-foreground" data-testid="media-mode">
           {iShare
             ? localAudio
-              ? "Vous partagez votre écran et son son. L'autre personne entend ce que le navigateur a accepté d'envoyer."
-              : "Vous partagez votre écran. Aucune piste audio n'accompagne cette image : la vidéo continue."
+              ? "Vous partagez, avec le son."
+              : "Vous partagez, sans son."
             : media === "remote"
               ? remoteAudio
-                ? "Écran de l'autre personne, avec le son."
-                : "Écran de l'autre personne. Ce partage n'a pas de son."
+                ? "Écran reçu, avec le son."
+                : "Écran reçu, sans son."
               : youRole === "watcher"
-                ? "Vous avez choisi de regarder. En attente du partage."
-                : "Choisissez un rôle. Vous pourrez l'inverser ensuite."}
+                ? "En attente du partage."
+                : "Partager, ou regarder."}
         </p>
         <p className="sr-only" data-testid="link-state">
           {link}
@@ -1288,17 +1258,17 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
       </section>
 
       {link === "failed" ? (
-        <p role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-base">
-          L&apos;image n&apos;a pas pu s&apos;établir. La personne qui partage peut arrêter, puis relancer le partage.
+        <p role="alert" className="pt-2 text-sm text-destructive">
+          Image impossible. Arrêtez le partage, puis relancez-le.
         </p>
       ) : null}
 
-      <div className="mt-auto flex flex-col gap-3">
+      <div className="flex flex-col gap-2 pt-2">
         {iShare ? (
           <Button
             type="button"
             variant="destructive"
-            className="h-14 w-full rounded-2xl text-base"
+            className="h-12 w-full rounded-lg bg-destructive text-base text-white hover:bg-destructive/90"
             onClick={() => void stopSharing()}
           >
             Arrêter le partage
@@ -1309,7 +1279,7 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
               <Button
                 type="button"
                 data-testid="watch-button"
-                className="h-14 w-full rounded-2xl text-base"
+                className="h-12 w-full rounded-lg text-base"
                 onClick={() => void watch()}
               >
                 Je regarde
@@ -1318,15 +1288,15 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
             <Button
               type="button"
               data-testid="share-button"
-              className="h-14 w-full rounded-2xl text-base"
+              className="h-12 w-full rounded-lg text-base"
               disabled={sharePending || canCapture === false}
               aria-describedby={canCapture === false ? "capture-unsupported" : undefined}
               onClick={() => void shareFromGesture()}
             >
               {sharePending && canCapture !== false
-                ? "Autorisation du navigateur…"
+                ? "Autorisation…"
                 : peerSharing
-                  ? "Partager mon écran à la place"
+                  ? "Partager à la place"
                   : "Je partage mon écran"}
             </Button>
             {canCapture !== false && youRole !== "watcher" && !peerSharing ? (
@@ -1334,7 +1304,7 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
                 type="button"
                 variant="secondary"
                 data-testid="watch-button"
-                className="h-14 w-full rounded-2xl text-base"
+                className="h-12 w-full rounded-lg text-base"
                 onClick={() => void watch()}
               >
                 Je regarde
@@ -1342,11 +1312,6 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
             ) : null}
           </>
         )}
-        <p className="text-center text-sm leading-relaxed text-muted-foreground">
-          {canCapture === false
-            ? "L'écran de ce téléphone ne peut pas être envoyé. Regardez celui de l'ordinateur."
-            : "Le partage ne démarre qu'après votre appui, quand le navigateur affiche sa demande."}
-        </p>
       </div>
     </main>
   );

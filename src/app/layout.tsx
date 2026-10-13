@@ -1,18 +1,7 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Outfit } from "next/font/google";
 import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -25,7 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Partage",
-    statusBarStyle: "default",
+    statusBarStyle: "black",
   },
   icons: {
     icon: [
@@ -37,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f6f1e7",
+  themeColor: "#111111",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -45,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}>
+    <html lang="fr" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         <PwaRegister />
         {children}

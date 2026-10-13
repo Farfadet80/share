@@ -3,9 +3,8 @@ import { HomeScreen } from "@/components/home-screen";
 
 function Opening() {
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-3 px-4 py-10">
-      <p className="text-sm font-semibold tracking-wide text-primary uppercase">Partage</p>
-      <h1 className="font-heading text-4xl">Ouverture de Partage…</h1>
+    <main className="grid min-h-dvh place-items-center px-4">
+      <p className="text-base">Ouverture…</p>
     </main>
   );
 }
