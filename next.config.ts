@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1", "*.trycloudflare.com"],
+  allowedDevOrigins: ["127.0.0.1", "*.trycloudflare.com", "*.onrender.com"],
   devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
