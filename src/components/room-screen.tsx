@@ -152,8 +152,10 @@ type RoomRefs = {
   pendingIce: Map<string, RTCIceCandidateInit[]>;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
+  remoteGeneration: number;
   others: PublicParticipant[];
   stopping: false | true;
+  restarting: boolean;
   sharePending: boolean;
 };
 
@@ -220,8 +222,10 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
     pendingIce: new Map(),
     localStream: null,
     remoteStream: null,
+    remoteGeneration: 0,
     others: [],
     stopping: false,
+    restarting: false,
     sharePending: false,
   });
   const handleSignalRef = useRef<(signal: StoredSignal) => Promise<void>>(async () => {});
@@ -298,7 +302,11 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
       media === "local" ? roomRef.current.localStream : media === "remote" ? roomRef.current.remoteStream : null;
     const remoteAudio = media === "remote" && (stream?.getAudioTracks().length ?? 0) > 0;
     let graph = gainRef.current;
-    if (stream && video.dataset.shareAudio === "graph") {
+    const keepGraph =
+      video.dataset.shareAudio === "graph" ||
+      Boolean(graph && graph.context.state !== "closed") ||
+      (shareVolumeNeedsGraph() && volumeRef.current !== 1);
+    if (stream && remoteAudio && keepGraph) {
       if (!graph || graph.context.state === "closed") {
         graph = createShareGraph();
         gainRef.current = graph;
@@ -340,6 +348,7 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
 
   function clearStage() {
     roomRef.current.remoteStream = null;
+    roomRef.current.remoteGeneration = 0;
     setMedia("none");
     setLink("idle");
     setSoundBlocked(false);
@@ -351,7 +360,6 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
   function closeLink(remoteId: string) {
     const link = roomRef.current.links.get(remoteId);
     roomRef.current.links.delete(remoteId);
-    roomRef.current.pendingOffers.delete(remoteId);
     for (const key of roomRef.current.pendingIce.keys()) {
       if (key.startsWith(`${remoteId}:`)) roomRef.current.pendingIce.delete(key);
     }
@@ -457,14 +465,18 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
     };
     pc.ontrack = (event) => {
       if (roomRef.current.localStream || roomRef.current.links.get(remoteId) !== link) return;
-      let stream = roomRef.current.remoteStream;
-      if (!stream) stream = event.streams[0] ?? new MediaStream();
+      if (roomRef.current.remoteGeneration !== generation) {
+        roomRef.current.remoteGeneration = generation;
+        roomRef.current.remoteStream = new MediaStream();
+      }
+      const stream = roomRef.current.remoteStream ?? new MediaStream();
+      roomRef.current.remoteStream = stream;
       const incoming = event.streams[0];
       const tracks = incoming ? incoming.getTracks() : [event.track];
       for (const track of tracks) {
+        if (track.readyState === "ended") continue;
         if (!stream.getTracks().includes(track)) stream.addTrack(track);
       }
-      roomRef.current.remoteStream = stream;
       setMedia("remote");
       bumpStream();
     };
@@ -476,39 +488,54 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
     return link;
   }
 
+  function linkSendsStream(link: Link, stream: MediaStream) {
+    const sending = new Set(link.pc.getSenders().map((sender) => sender.track).filter((track) => track && track.readyState === "live"));
+    const tracks = stream.getTracks().filter((track) => track.readyState === "live");
+    return tracks.length > 0 && tracks.every((track) => sending.has(track));
+  }
+
   async function sendOffer(remoteId: string, stream: MediaStream) {
-    if (roomRef.current.links.has(remoteId)) return;
     const generation = ++roomRef.current.localGeneration;
     const link = openLink(remoteId, generation);
     for (const mediaTrack of stream.getTracks()) link.pc.addTrack(mediaTrack, stream);
     const offer = await link.pc.createOffer();
     await link.pc.setLocalDescription(offer);
+    if (roomRef.current.links.get(remoteId) !== link || roomRef.current.stopping || roomRef.current.restarting) {
+      return generation;
+    }
     await postSignal({
       type: "offer",
       generation,
       to: remoteId,
       sdp: { type: offer.type ?? "offer", sdp: offer.sdp ?? "" },
     });
+    return generation;
   }
 
   async function ensureOffers() {
     const stream = roomRef.current.localStream;
-    if (!stream || roomRef.current.stopping) return;
+    if (!stream || roomRef.current.stopping || roomRef.current.restarting) return;
     const present = new Set(roomRef.current.others.map((person) => person.id));
     for (const remoteId of [...roomRef.current.links.keys()]) {
       if (!present.has(remoteId)) closeLink(remoteId);
     }
     for (const person of roomRef.current.others) {
-      if (roomRef.current.links.has(person.id) || roomRef.current.pendingOffers.has(person.id)) continue;
+      if (roomRef.current.pendingOffers.has(person.id)) continue;
+      const existing = roomRef.current.links.get(person.id);
+      if (existing && linkSendsStream(existing, stream)) continue;
       roomRef.current.pendingOffers.add(person.id);
+      let generation = 0;
+      let failed = false;
       try {
-        await sendOffer(person.id, stream);
+        generation = await sendOffer(person.id, stream);
       } catch (error) {
+        failed = true;
         closeLink(person.id);
         if (error instanceof Error && error.message === "insecure") throw error;
         setLink("failed");
       } finally {
-        roomRef.current.pendingOffers.delete(person.id);
+        const current = roomRef.current.links.get(person.id);
+        if (failed || !current || current.generation === generation) roomRef.current.pendingOffers.delete(person.id);
       }
     }
     refreshLinkState();
@@ -522,10 +549,17 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
     const from = signal.from;
     if (payload.type === "reset") {
       const wasSharing = Boolean(roomRef.current.localStream);
-      stopLocal();
-      closeAllLinks();
+      if (wasSharing) {
+        stopLocal();
+        closeAllLinks();
+        clearStage();
+        setYouRole("watcher");
+        return;
+      }
+      const current = roomRef.current.links.get(from);
+      if (current && current.generation > payload.generation) return;
+      closeLink(from);
       clearStage();
-      if (wasSharing) setYouRole("watcher");
       return;
     }
 
@@ -734,9 +768,9 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
   }, [immersive]);
 
   async function publishStream(stream: MediaStream) {
+    roomRef.current.restarting = true;
     stopLocal();
     closeAllLinks();
-    roomRef.current.localStream = stream;
     const [track] = stream.getVideoTracks();
     if (track) {
       track.onended = () => {
@@ -748,10 +782,13 @@ export function RoomScreen({ code: rawCode }: { code: string }) {
       await postRole("sharer");
       const generation = ++roomRef.current.localGeneration;
       await postSignal({ type: "reset", generation });
+      roomRef.current.localStream = stream;
+      roomRef.current.restarting = false;
       await ensureOffers();
       setMedia("local");
       bumpStream();
     } catch (caught) {
+      roomRef.current.restarting = false;
       stopLocal();
       closeAllLinks();
       clearStage();
